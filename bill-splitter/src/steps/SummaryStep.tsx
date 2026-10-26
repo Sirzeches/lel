@@ -4,12 +4,17 @@ import { formatMoney } from '../lib/money'
 import { computeSplit } from '../lib/split'
 import { summaryText } from '../lib/summary'
 
-export function SummaryStep({ bill, onBack, onRestart }: Omit<StepProps, 'update' | 'onNext'> & { onRestart: () => void }) {
+export function SummaryStep({
+  bill,
+  onBack,
+  onRestart,
+  confirming,
+}: Omit<StepProps, 'update' | 'onNext'> & { onRestart: () => void; confirming: boolean }) {
   const fmt = (c: number) => formatMoney(c, bill.currency)
   const result = useMemo(() => computeSplit(bill), [bill])
   const [copied, setCopied] = useState(false)
+  const [showText, setShowText] = useState(false)
   const text = summaryText(result, bill.currency)
-  const canShare = typeof navigator !== 'undefined' && 'share' in navigator
 
   async function copy() {
     try {
@@ -17,7 +22,8 @@ export function SummaryStep({ bill, onBack, onRestart }: Omit<StepProps, 'update
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      window.prompt('Copy the summary:', text)
+      // Clipboard blocked: show the text so it can be selected and copied by hand.
+      setShowText(true)
     }
   }
 
@@ -79,14 +85,13 @@ export function SummaryStep({ bill, onBack, onRestart }: Omit<StepProps, 'update
         <button className="btn primary" onClick={copy}>
           {copied ? '✓ Copied' : 'Copy summary'}
         </button>
-        {canShare && (
-          <button className="btn" onClick={() => navigator.share({ title: 'Bill split', text }).catch(() => {})}>
-            Share…
-          </button>
-        )}
       </div>
 
-      <Nav onBack={onBack} onNext={onRestart} nextLabel="New bill" />
+      {showText && (
+        <textarea className="summary-text" readOnly rows={10} value={text} onFocus={(e) => e.target.select()} autoFocus aria-label="Summary text" />
+      )}
+
+      <Nav onBack={onBack} onNext={onRestart} nextLabel={confirming ? 'Tap again to clear' : 'New bill'} />
     </section>
   )
 }

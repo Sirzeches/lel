@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import type { BillUpdater } from './components'
-import { STEPS, emptyBill, usePersistentState, type Step } from './lib/state'
+import { STEPS, emptyBill, uid, usePersistentState, type Step } from './lib/state'
+import { SAMPLE_RECEIPT } from './lib/sample'
+import { parseReceiptText } from './lib/parser'
 import { AssignStep } from './steps/AssignStep'
 import { PeopleStep } from './steps/PeopleStep'
 import { ReviewStep } from './steps/ReviewStep'
@@ -24,9 +27,30 @@ export function App() {
     })
     window.scrollTo({ top: 0 })
   }
+  // Two-tap confirmation: the first tap arms it, a second tap within a few seconds clears the bill.
+  const [confirming, setConfirming] = useState(false)
   const restart = () => {
-    if (bill.items.length && !window.confirm('Start a new bill? The current one will be cleared.')) return
+    if (bill.items.length && !confirming) {
+      setConfirming(true)
+      setTimeout(() => setConfirming(false), 4000)
+      return
+    }
+    setConfirming(false)
     setState({ step: 0, bill: emptyBill(bill.currency), ocrText: '' })
+  }
+  const loadSample = () => {
+    const parsed = parseReceiptText(SAMPLE_RECEIPT)
+    setState((s) => ({
+      ...s,
+      step: 1,
+      ocrText: SAMPLE_RECEIPT,
+      bill: {
+        ...s.bill,
+        items: parsed.items.map((i) => ({ ...i, id: uid(), assignees: [] })),
+        extras: parsed.extras.map((e) => ({ ...e, id: uid() })),
+        receiptTotal: parsed.total,
+      },
+    }))
   }
   const next = () => go(Math.min(step + 1, 4) as Step)
   const back = () => go(Math.max(step - 1, 0) as Step)
@@ -37,8 +61,8 @@ export function App() {
         <div className="row space">
           <h1>🧾 Bill Splitter</h1>
           {(bill.items.length > 0 || bill.people.length > 0) && (
-            <button className="link-btn" onClick={restart}>
-              Start over
+            <button className={`link-btn ${confirming ? 'danger' : ''}`} onClick={restart}>
+              {confirming ? 'Tap again to clear this bill' : 'Start over'}
             </button>
           )}
         </div>
@@ -62,12 +86,13 @@ export function App() {
               setState((s) => ({ ...s, bill: { ...s.bill, ...patch }, ocrText: text, step: 1 }))
             }}
             onManual={next}
+            onSample={loadSample}
           />
         )}
         {step === 1 && <ReviewStep bill={bill} update={update} onNext={next} onBack={back} ocrText={ocrText} />}
         {step === 2 && <PeopleStep bill={bill} update={update} onNext={next} onBack={back} />}
         {step === 3 && <AssignStep bill={bill} update={update} onNext={next} onBack={back} />}
-        {step === 4 && <SummaryStep bill={bill} onBack={back} onRestart={restart} />}
+        {step === 4 && <SummaryStep bill={bill} onBack={back} onRestart={restart} confirming={confirming} />}
       </main>
     </div>
   )

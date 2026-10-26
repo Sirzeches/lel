@@ -44,7 +44,8 @@ export async function recognizeReceipt(file: Blob, onProgress?: (fraction: numbe
     createWorker('eng', undefined, {
       workerPath: `${base}worker.min.js`,
       corePath: base,
-      langPath: base,
+      // Tesseract appends "/eng.traineddata.gz"; the "?" turns that into an ignored query string.
+      langPath: `${base}eng-traineddata.wasm?`,
       logger: (m: { status: string; progress: number }) => onProgress?.(m.progress, m.status),
       errorHandler: (e: unknown) => console.error(e),
     }),

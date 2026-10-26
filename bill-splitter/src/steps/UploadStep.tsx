@@ -16,10 +16,12 @@ export function UploadStep({
   hasExistingBill,
   onScanned,
   onManual,
+  onSample,
 }: {
   hasExistingBill: boolean
   onScanned: (patch: Partial<Bill>, ocrText: string) => void
   onManual: () => void
+  onSample: () => void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -123,6 +125,11 @@ export function UploadStep({
         <button className="btn ghost block" onClick={onManual} disabled={busy}>
           {hasExistingBill ? 'Continue with current items →' : 'No receipt? Enter items manually →'}
         </button>
+        {!hasExistingBill && (
+          <button className="link-btn center" onClick={onSample} disabled={busy}>
+            Just looking? Try a sample receipt
+          </button>
+        )}
       </div>
     </section>
   )

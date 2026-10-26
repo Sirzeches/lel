@@ -15,7 +15,9 @@ const files = [
     join(pkgDir('tesseract.js-core'), `${f}.wasm.js`),
     `${f}.wasm.js`,
   ]),
-  [join(pkgDir('@tesseract.js-data/eng'), '4.0.0_best_int', 'eng.traineddata.gz'), 'eng.traineddata.gz'],
+  // Stored under a .wasm name because some static hosts refuse to serve .gz files.
+  // The bytes are still gzip; Tesseract detects that and decompresses them.
+  [join(pkgDir('@tesseract.js-data/eng'), '4.0.0_best_int', 'eng.traineddata.gz'), 'eng-traineddata.wasm'],
 ]
 for (const [from, to] of files) copyFileSync(from, join(out, to))
 console.log(`Copied ${files.length} OCR assets to public/ocr`)
